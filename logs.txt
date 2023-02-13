@@ -1,0 +1,7 @@
+Array
+(
+    [chat_id] => 355919981
+    [text] => Hi click
+)
+
+

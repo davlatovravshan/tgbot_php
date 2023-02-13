@@ -1,0 +1,11 @@
+{
+    "require": {
+        "guzzlehttp/guzzle": "^7.5",
+        "predis/predis": "^2.1"
+    },
+    "autoload": {
+        "psr-4": {
+            "telegram\\": "telegram/"
+        }
+    }
+}

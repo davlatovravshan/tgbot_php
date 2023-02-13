@@ -4,13 +4,13 @@ require_once 'autoload.php';
 
 use GuzzleHttp\Exception\GuzzleException;
 use middlewares\CheckAdminMiddleware;
+use scenes\PhotoScene;
 use telegram\Telegram;
 use scenes\UserInfoScene;
 
 
 try {
     $telegram = new Telegram(BOT_TOKEN);
-    $telegram->initRedis();
 
     $telegram->onCommand('start', function (Telegram $ctx) {
         $ctx->answer('Hi start', [
@@ -40,42 +40,33 @@ try {
     });
 
 
-    /*$infoScene = new UserInfoScene($telegram);
+    $telegram->initScene(UserInfoScene::class);
 
-    $infoScene->handle(function (Telegram $ctx) {
-        $ctx->answer('Enter your age');
-    });
-
-    $infoScene->handle(function (Telegram $ctx) {
-        $ctx->answer('Enter your sex');
-    });
-
-    $infoScene->runHandlers();
-
-    $telegram->onCommand('info', $infoScene);*/
-
+    $telegram->initScene(PhotoScene::class);
 
 
     $telegram->onMessage(function (Telegram $ctx) {
-        $key = "prevMessage_{$ctx->getFromId()}";
-        $prevMessage = $ctx->redis->get($key);
+        /*$key = "prevMessage_{$ctx->getFromId()}";
+        $prevMessage = $ctx->getRedis()->get($key);
 
         $ctx->answer($ctx->getText() . '-' . $prevMessage);
-        $ctx->redis->set($key, $ctx->getText());
+        $ctx->getRedis()->set($key, $ctx->getText());*/
     });
 
 } catch (GuzzleException $e) {
     echo $e->getMessage();
+} catch (Exception $e) {
+    echo $e->getMessage();
 }
 
 
-//$telegram->redis->flushall();
+//$telegram->getRedis()->flushall();
 
 // put redis info to db/redis.json
-$redisKeys = $telegram->redis->keys('*');
+$redisKeys = $telegram->getRedis()->keys('*');
 $redisData = [];
 foreach ($redisKeys as $key) {
-    $redisData[$key] = $telegram->redis->get($key);
+    $redisData[$key] = $telegram->getRedis()->get($key);
 }
 file_put_contents(
     'db/redis.json',

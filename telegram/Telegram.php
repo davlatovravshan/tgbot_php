@@ -2,11 +2,13 @@
 
 namespace telegram;
 
+use Exception;
 use Predis\Client as PredisClient;
 use GuzzleHttp\Client;
 use GuzzleHttp\Exception\GuzzleException;
 use Psr\Http\Message\StreamInterface;
 use telegram\interfaces\TelegramInterface;
+use telegram\scenes\BaseScene;
 
 
 /**
@@ -42,15 +44,9 @@ class Telegram implements TelegramInterface
 
 
     /**
-     * @var PredisClient
+     * @var PredisClient|null
      */
-    public PredisClient $redis;
-
-
-    /**
-     *
-     */
-    public const REDIS_KEY = 'telegram';
+    private ?PredisClient $redis = null;
 
 
     /**
@@ -65,7 +61,6 @@ class Telegram implements TelegramInterface
     }
 
 
-
     /**
      * @return void
      */
@@ -77,22 +72,53 @@ class Telegram implements TelegramInterface
 
 
     /**
-     * @param array $options
+     * @param string $sceneClass
      * @return void
+     * @throws Exception
      */
-    public function initRedis(array $options = []): void
+    public function initScene(string $sceneClass): void
     {
-        $this->redis = new PredisClient($options);
-        $this->redis->connect();
+        if (!class_exists($sceneClass)) {
+            throw new Exception("Scene class $sceneClass not found");
+        }
+
+        /** @var BaseScene $scene */
+        $scene = new $sceneClass($this);
+
+        if (!($scene instanceof BaseScene)) {
+            throw new Exception("Scene class $sceneClass must be inherited from BaseScene");
+        }
+
+        $scene->initHandlers();
     }
 
 
     /**
-     * @return string|null
+     * @param array $options
+     * @return void
+     * @throws Exception
      */
-    public function getRedisData(): ?string
+    private function initRedis(array $options = []): void
     {
-        return $this->redis->get(self::REDIS_KEY);
+        try {
+            $this->redis = new PredisClient($options);
+            $this->redis->connect();
+        } catch (Exception $e) {
+            throw new Exception('Cannot connect to Redis: ' . $e->getMessage());
+        }
+    }
+
+
+    /**
+     * @return PredisClient
+     * @throws Exception
+     */
+    public function getRedis(): PredisClient
+    {
+        if (!$this->redis) {
+            $this->initRedis();
+        }
+        return $this->redis;
     }
 
 
@@ -102,11 +128,15 @@ class Telegram implements TelegramInterface
      */
     public function onMessage(callable ...$middlewares): void
     {
+        if ($this->answered) {
+            return;
+        }
+
         if ($this->isMessage()) {
             $this->callMiddlewares($middlewares, $this);
+            $this->answered = true;
         }
     }
-
 
 
     /**
@@ -116,11 +146,15 @@ class Telegram implements TelegramInterface
      */
     public function onCommand(string $command, callable ...$middlewares): void
     {
+        if ($this->answered) {
+            return;
+        }
+
         if ($this->isCommand() && $this->getCommand() == $command) {
             $this->callMiddlewares($middlewares, $this);
+            $this->answered = true;
         }
     }
-
 
 
     /**
@@ -130,11 +164,15 @@ class Telegram implements TelegramInterface
      */
     public function onCallbackQuery(string $cbQuery, callable ...$middlewares): void
     {
+        if ($this->answered) {
+            return;
+        }
+
         if ($this->isCallbackQuery() && $this->getCallbackQuery() == $cbQuery) {
             $this->callMiddlewares($middlewares, $this);
+            $this->answered = true;
         }
     }
-
 
 
     /**
@@ -153,6 +191,23 @@ class Telegram implements TelegramInterface
     }
 
 
+    /**
+     * @param string $photo
+     * @param array $options
+     * @return void
+     * @throws GuzzleException
+     */
+    public function answerWithPhoto(string $photo, array $options = []): void
+    {
+        if ($this->answered) {
+            return;
+        }
+
+        $chatId = get($this->message, 'chat.id');
+        $this->sendPhoto($chatId, $photo, $options);
+        $this->answered = true;
+    }
+
 
     /**
      * @param $text
@@ -166,7 +221,6 @@ class Telegram implements TelegramInterface
     }
 
 
-
     /**
      * @param $text
      * @param array $options
@@ -175,10 +229,14 @@ class Telegram implements TelegramInterface
      */
     public function answer($text, array $options = []): void
     {
+        if ($this->answered) {
+            return;
+        }
+
         $chatId = get($this->message, 'chat.id');
         $this->sendMessage($chatId, $text, $options);
+        $this->answered = true;
     }
-
 
 
     /**
@@ -196,7 +254,6 @@ class Telegram implements TelegramInterface
             $middleware($ctx);
         }
     }
-
 
 
     /**
@@ -218,6 +275,24 @@ class Telegram implements TelegramInterface
 
 
     /**
+     * @param $chatId
+     * @param $photo
+     * @param array $options
+     * @return void
+     * @throws GuzzleException
+     */
+    public function sendPhoto($chatId, $photo, array $options = []): void
+    {
+        $data = array_merge([
+            'chat_id' => $chatId,
+            'photo' => $photo
+        ], $options);
+
+        $this->sendRequest('sendPhoto', $data);
+    }
+
+
+    /**
      * @param $method
      * @param $data
      * @return StreamInterface|null
@@ -225,17 +300,12 @@ class Telegram implements TelegramInterface
      */
     public function sendRequest($method, $data): StreamInterface|null
     {
-        if ($this->answered) {
-            return null;
-        }
-
         $requestUrl = $this->apiUrl . $method;
 
         $client = new Client();
         $response = $client->request('POST', $requestUrl, [
             'json' => $data
         ]);
-        $this->answered = true;
 
         return $response->getBody();
     }

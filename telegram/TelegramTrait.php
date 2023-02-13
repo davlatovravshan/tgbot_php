@@ -19,6 +19,13 @@ trait TelegramTrait
     }
 
 
+
+    public function getPhoto(): ?array
+    {
+        return get($this->input, 'message.photo');
+    }
+
+
     public function getCallbackQuery(): string
     {
         return get($this->input, 'callback_query.data');

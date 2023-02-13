@@ -2,6 +2,7 @@
 
 namespace scenes;
 
+use Exception;
 use GuzzleHttp\Exception\GuzzleException;
 use telegram\scenes\BaseScene;
 use telegram\Telegram;
@@ -10,58 +11,57 @@ use telegram\Telegram;
 class UserInfoScene extends BaseScene
 {
 
-
     public function __construct(Telegram $ctx)
     {
         $this->sceneName = 'info';
         parent::__construct($ctx);
     }
 
+    /**
+     * @throws Exception
+     */
+    public function initHandlers(): void
+    {
+        $this->handle(function (Telegram $ctx, UserInfoScene $scene) {
+            $scene->appendData('name', $ctx->getText());
+            $ctx->answer('Enter your age');
+            $scene->next();
+        });
+
+        $this->handle(function (Telegram $ctx, UserInfoScene $scene) {
+
+            if (!is_numeric($ctx->getText())) {
+                $ctx->answer('Age must be numeric');
+                return;
+            }
+
+            $scene->appendData('age', $ctx->getText());
+            $ctx->answer('Enter your sex');
+            $scene->next();
+        });
+
+        $this->handle(function (Telegram $ctx, UserInfoScene $scene) {
+            $scene->appendData('sex', $ctx->getText());
+            $ctx->answer('Your info: ' . json_encode($scene->getData()));
+        });
+
+        $infoScene = $this;
+        $this->ctx->onCommand('cancel', function (Telegram $ctx) use ($infoScene) {
+            if ($infoScene->cancel()) {
+                $ctx->answer('Canceled');
+            }
+        });
+
+        $infoScene->runHandlers();
+    }
+
 
     /**
-     * @param Telegram $ctx
-     * @return void
      * @throws GuzzleException
      */
-    public function __invoke(Telegram $ctx): void
+    public function onStart(): void
     {
-        $ctx->answer(<<<TEXT
-Hi {$ctx->getFirstName()}!
-Enter your name
-TEXT);
-
-        if (!$this->isStarted()) {
-            $ctx->redis->set($this->sceneKey, $this->step);
-        }
+        $this->ctx->answer("Hi {$this->ctx->getFirstName()}!\nEnter your name");
     }
 
-
-
-    public function handle(callable $cb)
-    {
-        $this->steps[] = $cb;
-    }
-
-
-    public function runHandlers()
-    {
-        if (!$this->isStarted()) {
-            return;
-        }
-
-        foreach ($this->steps as $index => $stepCb) {
-            $step = $this->ctx->redis->get($this->sceneKey);
-            if ((int)$step === $index) {
-                $stepCb($this->ctx);
-                $this->ctx->redis->set($this->sceneKey, $step + 1);
-                break;
-            }
-        }
-    }
-
-
-    public function isStarted(): bool
-    {
-        return $this->ctx->redis->exists($this->sceneKey);
-    }
 }

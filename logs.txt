@@ -1,7 +1,62 @@
 Array
 (
-    [chat_id] => 355919981
-    [text] => Hi click
+    [update_id] => 309967089
+    [message] => Array
+        (
+            [message_id] => 2018
+            [from] => Array
+                (
+                    [id] => 355919981
+                    [is_bot] => 
+                    [first_name] => Равшан
+                    [last_name] => Давлатов
+                    [username] => ravshan014
+                    [language_code] => ru
+                )
+
+            [chat] => Array
+                (
+                    [id] => 355919981
+                    [first_name] => Равшан
+                    [last_name] => Давлатов
+                    [username] => ravshan014
+                    [type] => private
+                )
+
+            [date] => 1676274469
+            [photo] => Array
+                (
+                    [0] => Array
+                        (
+                            [file_id] => AgACAgIAAxkBAAIH4mPp6yWC8XhG7oupz_AUNTo2Ne4vAAIMxjEbZUhQS0KfL3Mpe-s1AQADAgADcwADLgQ
+                            [file_unique_id] => AQADDMYxG2VIUEt4
+                            [file_size] => 1545
+                            [width] => 90
+                            [height] => 90
+                        )
+
+                    [1] => Array
+                        (
+                            [file_id] => AgACAgIAAxkBAAIH4mPp6yWC8XhG7oupz_AUNTo2Ne4vAAIMxjEbZUhQS0KfL3Mpe-s1AQADAgADbQADLgQ
+                            [file_unique_id] => AQADDMYxG2VIUEty
+                            [file_size] => 16353
+                            [width] => 320
+                            [height] => 320
+                        )
+
+                    [2] => Array
+                        (
+                            [file_id] => AgACAgIAAxkBAAIH4mPp6yWC8XhG7oupz_AUNTo2Ne4vAAIMxjEbZUhQS0KfL3Mpe-s1AQADAgADeAADLgQ
+                            [file_unique_id] => AQADDMYxG2VIUEt9
+                            [file_size] => 29537
+                            [width] => 640
+                            [height] => 640
+                        )
+
+                )
+
+        )
+
 )
 
 

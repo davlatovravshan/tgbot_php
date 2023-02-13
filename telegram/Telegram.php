@@ -8,7 +8,6 @@ use GuzzleHttp\Client;
 use GuzzleHttp\Exception\GuzzleException;
 use Psr\Http\Message\StreamInterface;
 use telegram\interfaces\TelegramInterface;
-use telegram\scenes\BaseScene;
 
 
 /**
@@ -51,6 +50,7 @@ class Telegram implements TelegramInterface
 
     /**
      * @param string $token
+     * @throws Exception
      */
     public function __construct(string $token)
     {
@@ -58,6 +58,7 @@ class Telegram implements TelegramInterface
         $this->apiUrl = API_URL . "bot$this->token/";
 
         $this->loadInput();
+        $this->initRedis();
     }
 
 
@@ -68,28 +69,6 @@ class Telegram implements TelegramInterface
     {
         $this->input = json_decode(file_get_contents('php://input'), true);
         $this->message = $this->getMessageObject();
-    }
-
-
-    /**
-     * @param string $sceneClass
-     * @return void
-     * @throws Exception
-     */
-    public function initScene(string $sceneClass): void
-    {
-        if (!class_exists($sceneClass)) {
-            throw new Exception("Scene class $sceneClass not found");
-        }
-
-        /** @var BaseScene $scene */
-        $scene = new $sceneClass($this);
-
-        if (!($scene instanceof BaseScene)) {
-            throw new Exception("Scene class $sceneClass must be inherited from BaseScene");
-        }
-
-        $scene->initHandlers();
     }
 
 
@@ -115,9 +94,6 @@ class Telegram implements TelegramInterface
      */
     public function getRedis(): PredisClient
     {
-        if (!$this->redis) {
-            $this->initRedis();
-        }
         return $this->redis;
     }
 
@@ -240,23 +216,6 @@ class Telegram implements TelegramInterface
 
 
     /**
-     * @param array $middlewares
-     * @param Telegram $ctx
-     * @return void
-     */
-    private function callMiddlewares(array $middlewares, Telegram $ctx): void
-    {
-        $middleware = array_shift($middlewares);
-
-        if (count($middlewares) > 0) {
-            $middleware($ctx, fn() => $this->callMiddlewares($middlewares, $ctx));
-        } else {
-            $middleware($ctx);
-        }
-    }
-
-
-    /**
      * @param $chatId
      * @param $text
      * @param array $options
@@ -308,5 +267,22 @@ class Telegram implements TelegramInterface
         ]);
 
         return $response->getBody();
+    }
+
+
+    /**
+     * @param array $middlewares
+     * @param Telegram $ctx
+     * @return void
+     */
+    private function callMiddlewares(array $middlewares, Telegram $ctx): void
+    {
+        $middleware = array_shift($middlewares);
+
+        if (count($middlewares) > 0) {
+            $middleware($ctx, fn() => $this->callMiddlewares($middlewares, $ctx));
+        } else {
+            $middleware($ctx);
+        }
     }
 }

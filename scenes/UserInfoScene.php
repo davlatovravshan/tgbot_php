@@ -22,6 +22,7 @@ class UserInfoScene extends BaseScene
      */
     public function initHandlers(): void
     {
+
         $this->handle(function (Telegram $ctx, UserInfoScene $scene) {
             $scene->appendData('name', $ctx->getText());
             $ctx->answer('Enter your age');
@@ -45,14 +46,14 @@ class UserInfoScene extends BaseScene
             $ctx->answer('Your info: ' . json_encode($scene->getData()));
         });
 
-        $infoScene = $this;
-        $this->ctx->onCommand('cancel', function (Telegram $ctx) use ($infoScene) {
-            if ($infoScene->cancel()) {
-                $ctx->answer('Canceled');
-            }
+        $scene = $this;
+
+        $this->ctx->onCommand('cancel', function (Telegram $ctx) use ($scene) {
+            $ctx->answer('Canceled');
+            $scene->finish();
         });
 
-        $infoScene->runHandlers();
+        $this->ctx->onCommand('info', fn() => $scene->restart());
     }
 
 

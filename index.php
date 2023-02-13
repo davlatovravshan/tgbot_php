@@ -40,17 +40,19 @@ try {
     });
 
 
-    $telegram->initScene(UserInfoScene::class);
+    $infoScene = new UserInfoScene($telegram);
+    $telegram->onCommand('info', fn() => $infoScene->start());
 
-    $telegram->initScene(PhotoScene::class);
+    $photoScene = new PhotoScene($telegram);
+    $telegram->onCommand('photo', fn() => $photoScene->start());
 
 
     $telegram->onMessage(function (Telegram $ctx) {
-        /*$key = "prevMessage_{$ctx->getFromId()}";
+        $key = "prevMessage_{$ctx->getFromId()}";
         $prevMessage = $ctx->getRedis()->get($key);
 
         $ctx->answer($ctx->getText() . '-' . $prevMessage);
-        $ctx->getRedis()->set($key, $ctx->getText());*/
+        $ctx->getRedis()->set($key, $ctx->getText());
     });
 
 } catch (GuzzleException $e) {

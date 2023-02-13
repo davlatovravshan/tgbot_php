@@ -52,15 +52,14 @@ class PhotoScene extends BaseScene
             ]);
         });
 
+        $scene = $this;
 
-        $photoScene = $this;
-        $this->ctx->onCommand('cancel', function (Telegram $ctx) use ($photoScene) {
-            if ($photoScene->cancel()) {
-                $ctx->answer('Canceled');
-            }
+        $this->ctx->onCommand('cancel', function (Telegram $ctx) use ($scene) {
+            $ctx->answer('Canceled');
+            $scene->finish();
         });
 
-        $photoScene->runHandlers();
+        $this->ctx->onCommand('photo', fn() => $scene->restart());
     }
 
 }

@@ -47,9 +47,9 @@ class BaseScene
     public array $steps = [];
 
 
-
     /**
      * @param Telegram $ctx
+     * @throws Exception
      */
     public function __construct(Telegram $ctx)
     {
@@ -57,16 +57,11 @@ class BaseScene
         $this->ctx = $ctx;
         $this->sceneKey = "scene_{$this->sceneName}_{$ctx->getFromId()}";
         $this->sceneDataKey = "scene_{$this->sceneName}_{$ctx->getFromId()}_data";
-    }
 
-
-    /**
-     * @return void
-     * @throws Exception
-     */
-    public function __invoke(): void
-    {
-        $this->restart();
+        if ($this->isStarted()) {
+            $this->initHandlers();
+            $this->runHandlers();
+        }
     }
 
 
@@ -94,21 +89,16 @@ class BaseScene
      */
     public function runHandlers(): void
     {
-        if ($this->ctx->isCommand() && $this->ctx->getCommand() === $this->sceneName) {
-            $this->restart();
+        if (empty($this->steps)) {
             return;
         }
 
-        foreach ($this->steps as $index => $stepCb) {
-            $step = $this->ctx->getRedis()->get($this->sceneKey);
-            if ($step == $index) {
-                $stepCb($this->ctx, $this);
-
-                if ($index == count($this->steps) - 1) {
-                    $this->finish();
-                }
-
-                break;
+        $step = $this->ctx->getRedis()->get($this->sceneKey);
+        $stepCb = $this->steps[$step];
+        if ($stepCb) {
+            $stepCb($this->ctx, $this);
+            if ($step == count($this->steps) - 1) {
+                $this->finish();
             }
         }
     }
@@ -166,7 +156,7 @@ class BaseScene
      * @return bool
      * @throws Exception
      */
-    private function isStarted(): bool
+    public function isStarted(): bool
     {
         return $this->ctx->getRedis()->exists($this->sceneKey);
     }
@@ -176,7 +166,7 @@ class BaseScene
      * @return void
      * @throws Exception
      */
-    private function restart(): void
+    public function restart(): void
     {
         $this->finish();
         $this->start();
@@ -199,27 +189,11 @@ class BaseScene
      * @return void
      * @throws Exception
      */
-    private function start(): void
+    public function start(): void
     {
         $this->ctx->getRedis()->set($this->sceneKey, 0);
         $this->onStart();
     }
-
-
-    /**
-     * @return bool
-     * @throws Exception
-     */
-    public function cancel(): bool
-    {
-        if ($this->isStarted()) {
-            $this->finish();
-            return true;
-        }
-
-        return false;
-    }
-
 
 
     /**

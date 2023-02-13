@@ -3,7 +3,6 @@
 require 'vendor/autoload.php';
 require 'functions.php';
 require 'config.php';
-//require 'db/redis.php';
 
 spl_autoload_register(function ($class) {
     $class = str_replace('\\', '/', $class);

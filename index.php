@@ -60,17 +60,3 @@ try {
 } catch (Exception $e) {
     echo $e->getMessage();
 }
-
-
-//$telegram->getRedis()->flushall();
-
-// put redis info to db/redis.json
-$redisKeys = $telegram->getRedis()->keys('*');
-$redisData = [];
-foreach ($redisKeys as $key) {
-    $redisData[$key] = $telegram->getRedis()->get($key);
-}
-file_put_contents(
-    'db/redis.json',
-    json_encode($redisData) . PHP_EOL . PHP_EOL
-);

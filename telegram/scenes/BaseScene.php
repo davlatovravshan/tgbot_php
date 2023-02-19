@@ -3,7 +3,8 @@
 namespace telegram\scenes;
 
 use Exception;
-use telegram\Telegram;
+use telegram\TgBot_old;
+use telegram\TgBot;
 
 /**
  * Class BaseScene
@@ -18,15 +19,9 @@ class BaseScene
 
 
     /**
-     * @var Telegram
+     * @var TgBot_old
      */
-    public Telegram $ctx;
-
-
-    /**
-     * @var string
-     */
-    public string $sceneName = '';
+    public $ctx;
 
 
     /**
@@ -48,20 +43,48 @@ class BaseScene
 
 
     /**
-     * @param Telegram $ctx
+     *
+     */
+    public const CANCEL_BUTTON = [
+        [
+            [
+                'text' => 'Отмена',
+                'callback_data' => 'cancel',
+            ],
+        ],
+    ];
+
+
+    /**
+     * @param string $sceneName
+     * @param TgBot $ctx
      * @throws Exception
      */
-    public function __construct(Telegram $ctx)
+    public function __construct(string $sceneName, TgBot $ctx)
     {
         $this->chatId = $ctx->getFromId();
         $this->ctx = $ctx;
-        $this->sceneKey = "scene_{$this->sceneName}_{$ctx->getFromId()}";
-        $this->sceneDataKey = "scene_{$this->sceneName}_{$ctx->getFromId()}_data";
+        $this->sceneKey = self::getSceneKey($sceneName, $ctx->getFromId());
+        $this->sceneDataKey = self::getSceneKey($sceneName, $ctx->getFromId(), true);
 
-        if ($this->isStarted()) {
-            $this->initHandlers();
-            $this->runHandlers();
+        $this->initHandlers();
+        $this->runHandlers();
+    }
+
+
+    /**
+     * @param string $scene
+     * @param $chatId
+     * @param bool $isData
+     * @return string
+     */
+    public static function getSceneKey(string $scene, $chatId, bool $isData = false): string
+    {
+        $sceneName = "scene_{$scene}_{$chatId}";
+        if ($isData) {
+            return "{$sceneName}_data";
         }
+        return $sceneName;
     }
 
 
@@ -89,17 +112,22 @@ class BaseScene
      */
     public function runHandlers(): void
     {
-        if (empty($this->steps)) {
-            return;
-        }
+        try {
+            $step = $this->ctx->getRedis()->get($this->sceneKey);
+            console("runHandlers sceneKey: " . $this->sceneKey);
+            console("runHandlers step: " . $step);
 
-        $step = $this->ctx->getRedis()->get($this->sceneKey);
-        $stepCb = $this->steps[$step];
-        if ($stepCb) {
-            $stepCb($this->ctx, $this);
-            if ($step == count($this->steps) - 1) {
-                $this->finish();
+            if (empty($this->steps) || (empty($step) && $step != 0)) {
+                return;
             }
+
+            $stepCb = get($this->steps, $step);
+            if ($stepCb) {
+                $stepCb($this->ctx);
+            }
+        } catch (Exception $e) {
+            console($e->getMessage());
+            $this->finish();
         }
     }
 
@@ -117,15 +145,15 @@ class BaseScene
 
     /**
      * @param string $key
-     * @param string $value
+     * @param string|null $value
      * @return void
      * @throws Exception
      */
-    public function appendData(string $key, string $value): void
+    public function appendData(string $key, string $value = null): void
     {
         $data = $this->ctx->getRedis()->get($this->sceneDataKey);
         $data = json_decode($data, true);
-        $data[$key] = $value;
+        $data[$key] = $value ?? '';
         $this->ctx->getRedis()->set($this->sceneDataKey, json_encode($data));
     }
 
@@ -134,10 +162,14 @@ class BaseScene
      * @return mixed
      * @throws Exception
      */
-    public function getData(): mixed
+    public function getData(string $key = null)
     {
         $data = $this->ctx->getRedis()->get($this->sceneDataKey);
-        return json_decode($data, true);
+        $data = json_decode($data, true);
+        if ($key) {
+            return get($data, $key);
+        }
+        return $data;
     }
 
 
@@ -153,23 +185,16 @@ class BaseScene
 
 
     /**
+     * @param string|null $key
      * @return bool
      * @throws Exception
      */
-    public function isStarted(): bool
+    public function isStarted(string $key = null): bool
     {
+        if ($key) {
+            return $this->ctx->getRedis()->exists($key);
+        }
         return $this->ctx->getRedis()->exists($this->sceneKey);
-    }
-
-
-    /**
-     * @return void
-     * @throws Exception
-     */
-    public function restart(): void
-    {
-        $this->finish();
-        $this->start();
     }
 
 
@@ -191,6 +216,11 @@ class BaseScene
      */
     public function start(): void
     {
+        $anotherScenes = $this->ctx->getRedis()->keys("scene_*_{$this->ctx->getFromId()}");
+        console("Has another scene: " . json_encode($anotherScenes));
+        if (!empty($anotherScenes)) {
+            return;
+        }
         $this->ctx->getRedis()->set($this->sceneKey, 0);
         $this->onStart();
     }

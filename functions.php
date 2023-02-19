@@ -2,19 +2,22 @@
 
 function vdd($var, bool $append = false): void
 {
+    $file = 'logs.txt';
+    if ($append) {
+        $file = 'logs_append.txt';
+    }
     file_put_contents(
-        'logs.txt',
-        print_r($var, true) . PHP_EOL . PHP_EOL,
-        $append ? FILE_APPEND : null
+        $file,
+        json_encode($var, true) . PHP_EOL . PHP_EOL,
+        FILE_APPEND
     );
 }
 
 function vd($var): void
 {
-    file_put_contents(
-        'logs.txt',
-        json_encode($var, true) . PHP_EOL . PHP_EOL
-    );
+    echo '<pre>';
+    var_dump($var);
+    echo '</pre>';
 }
 
 function get($array, $key)
@@ -29,4 +32,18 @@ function get($array, $key)
         }
     }
     return $value;
+}
+
+
+function console($var)
+{
+    // classes
+    if (is_object($var)) {
+        $var = get_class($var);
+    }
+
+    if (is_array($var)) {
+        $var = json_encode($var, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+    }
+    echo $var . PHP_EOL;
 }

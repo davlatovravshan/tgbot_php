@@ -13,7 +13,7 @@ use telegram\interfaces\TelegramInterface;
 /**
  *  Telegram bot class
  */
-class Telegram implements TelegramInterface
+class TgBot_old implements TelegramInterface
 {
 
     use TelegramTrait;
@@ -21,19 +21,19 @@ class Telegram implements TelegramInterface
     /**
      * @var string
      */
-    public string $token;
+    private string $token;
 
 
     /**
      * @var string
      */
-    public string $apiUrl;
+    private string $apiUrl;
 
 
     /**
      * @var mixed
      */
-    public mixed $input;
+    private $input;
 
 
     /**
@@ -49,16 +49,95 @@ class Telegram implements TelegramInterface
 
 
     /**
+     *
+     */
+    public const ALLOWED_UPDATES = [
+        'message',
+        'edited_message',
+        'channel_post',
+        'edited_channel_post',
+        'inline_query',
+        'chosen_inline_result',
+        'callback_query',
+        'shipping_query',
+        'pre_checkout_query',
+        'poll',
+        'poll_answer'
+    ];
+
+
+    /**
      * @param string $token
+     * @param array $options
      * @throws Exception
      */
-    public function __construct(string $token)
+    public function __construct(string $token, array $options = [])
     {
-        $this->token = $token;
-        $this->apiUrl = API_URL . "bot$this->token/";
+        $API_URL = 'https://api.telegram.org/';
 
-        $this->loadInput();
+        $this->token = $token;
+        $this->apiUrl = $API_URL . "bot$this->token/";
+
+        if (get($options, 'polling')) {
+            $this->longPolling();
+        } else {
+            $this->loadInput();
+        }
+
         $this->initRedis();
+    }
+
+
+    /**
+     * @return void
+     */
+    public function launch(): void
+    {
+        $this->longPolling();
+    }
+
+
+    /**
+     * @return void
+     */
+    public function longPolling(): void
+    {
+        console('Long polling started');
+
+        $offset = 0;
+        while (true) {
+            $update = $this->getUpdates($offset);
+            if (empty($update)) {
+                continue;
+            }
+
+            console('Update received');
+            console($update);
+
+            $this->input = $update;
+            $this->message = $this->getMessageObject();
+
+            $offset = (int)get($update, 'update_id') + 1;
+            sleep(1);
+        }
+    }
+
+
+    /**
+     * @param int $offset
+     * @return array
+     * @throws GuzzleException
+     */
+    public function getUpdates(int $offset = 0): array
+    {
+        $params = [
+            'offset' => $offset,
+            'timeout' => 60,
+            'allowed_updates' => self::ALLOWED_UPDATES
+        ];
+        $response = $this->sendRequest('getUpdates', $params);
+        $parsedResponse = json_decode($response, true);
+        return get($parsedResponse, 'result.0') ?? [];
     }
 
 
@@ -134,6 +213,23 @@ class Telegram implements TelegramInterface
 
 
     /**
+     * @param callable ...$middlewares
+     * @return void
+     */
+    public function onAnyCallbackQuery(callable ...$middlewares): void
+    {
+        if ($this->answered) {
+            return;
+        }
+
+        if ($this->isCallbackQuery()) {
+            $this->callMiddlewares($middlewares, $this);
+            $this->answered = true;
+        }
+    }
+
+
+    /**
      *
      * @param string $cbQuery
      * @param callable ...$middlewares
@@ -186,14 +282,31 @@ class Telegram implements TelegramInterface
 
 
     /**
-     * @param $text
+     * @param string $text
+     * @param array $options
      * @return void
      * @throws GuzzleException
      */
-    public function answerCbQueryWithText($text): void
+    public function answerCbQueryWithMsg(string $text, array $options = []): void
     {
         $this->answerCbQuery();
-        $this->answer($text);
+        $this->answer($text, $options);
+    }
+
+
+    /**
+     * @param string $text
+     * @param array $options
+     * @return void
+     * @throws GuzzleException
+     */
+    public function answerHtml(string $text, array $options = []): void
+    {
+        $options = array_merge([
+            'parse_mode' => 'HTML'
+        ], $options);
+
+        $this->answer($text, $options);
     }
 
 
@@ -205,9 +318,9 @@ class Telegram implements TelegramInterface
      */
     public function answer($text, array $options = []): void
     {
-        if ($this->answered) {
+        /*if ($this->answered) {
             return;
-        }
+        }*/
 
         $chatId = get($this->message, 'chat.id');
         $this->sendMessage($chatId, $text, $options);
@@ -257,7 +370,7 @@ class Telegram implements TelegramInterface
      * @return StreamInterface|null
      * @throws GuzzleException
      */
-    public function sendRequest($method, $data): StreamInterface|null
+    public function sendRequest($method, $data): ?StreamInterface
     {
         $requestUrl = $this->apiUrl . $method;
 
@@ -272,10 +385,10 @@ class Telegram implements TelegramInterface
 
     /**
      * @param array $middlewares
-     * @param Telegram $ctx
+     * @param TgBot_old $ctx
      * @return void
      */
-    private function callMiddlewares(array $middlewares, Telegram $ctx): void
+    private function callMiddlewares(array $middlewares, TgBot_old $ctx): void
     {
         $middleware = array_shift($middlewares);
 
@@ -284,5 +397,10 @@ class Telegram implements TelegramInterface
         } else {
             $middleware($ctx);
         }
+    }
+
+    public function on(string $type, callable ...$middlewares): void
+    {
+        // TODO: Implement on() method.
     }
 }

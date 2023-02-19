@@ -2,11 +2,11 @@
 
 namespace middlewares;
 
-use telegram\Telegram;
+use telegram\TgBot;
 
 class CheckAdminMiddleware
 {
-    public function __invoke(Telegram $ctx, $next): void
+    public function __invoke(TgBot $ctx, $next): void
     {
         if ($ctx->getFromId() == ADMIN_ID) {
             $next();

@@ -5,18 +5,11 @@ namespace scenes;
 use Exception;
 use GuzzleHttp\Exception\GuzzleException;
 use telegram\scenes\BaseScene;
-use telegram\Telegram;
+use telegram\TgBot;
 
 
 class PhotoScene extends BaseScene
 {
-
-    public function __construct(Telegram $ctx)
-    {
-        $this->sceneName = 'photo';
-        parent::__construct($ctx);
-    }
-
 
     /**
      * @throws GuzzleException
@@ -29,10 +22,18 @@ class PhotoScene extends BaseScene
 
     /**
      * @throws Exception
+     * @throws GuzzleException
      */
     public function initHandlers(): void
     {
-        $this->handle(function (Telegram $ctx, PhotoScene $scene) {
+        $this->ctx->getCommand();
+        if ($this->ctx->getCommand() === 'cancel') {
+            $this->ctx->answer('Canceled');
+            $this->finish();
+            return;
+        }
+
+        $this->handle(function (TgBot $ctx) {
             $photo = $ctx->getPhoto();
             if (empty($photo)) {
                 $ctx->answer('Upload photo');
@@ -40,26 +41,19 @@ class PhotoScene extends BaseScene
             }
             $photo = end($photo);
             $fileId = get($photo, 'file_id');
-            $scene->appendData('photo', $fileId);
+            $this->appendData('photo', $fileId);
             $ctx->answer('Add description');
-            $scene->next();
+            $this->next();
         });
 
-        $this->handle(function (Telegram $ctx, PhotoScene $scene) {
-            $sceneData = $scene->getData();
-            $ctx->answerWithPhoto(get($sceneData, 'photo'), [
+        $this->handle(function (TgBot $ctx) {
+            $thisData = $this->getData();
+            $ctx->answerWithPhoto(get($thisData, 'photo'), [
                 'caption' => $ctx->getText()
             ]);
+            $this->finish();
         });
 
-        $scene = $this;
-
-        $this->ctx->onCommand('cancel', function (Telegram $ctx) use ($scene) {
-            $ctx->answer('Canceled');
-            $scene->finish();
-        });
-
-        $this->ctx->onCommand('photo', fn() => $scene->restart());
     }
 
 }

@@ -11,9 +11,7 @@ use telegram\TgBot;
 
 
 try {
-    $telegram = new TgBot(BOT_TOKEN, [
-        'polling' => true,
-    ]);
+    $telegram = new TgBot(BOT_TOKEN);
 
     $telegram->registerScene('info', UserInfoScene::class);
     $telegram->registerScene('photo', PhotoScene::class);

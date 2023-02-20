@@ -112,7 +112,7 @@ class TgBot implements TelegramInterface
     public function __construct(string $token, array $options = [])
     {
         $defaultOptions = [
-            'webhook' => [],
+            'webhook' => false,
             'redis' => [
                 'host' => '127.0.0.1',
                 'port' => 6379,
@@ -127,10 +127,10 @@ class TgBot implements TelegramInterface
 
         $this->initRedis();
 
-        $webhookUrl = get($this->options, 'webhook.url');
+        /*$webhookUrl = get($this->options, 'webhook');
         if (!empty($webhookUrl)) {
             $this->setWebhook($webhookUrl, get($this->options, 'webhook.options') ?? []);
-        }
+        }*/
     }
 
 
@@ -180,7 +180,7 @@ class TgBot implements TelegramInterface
      */
     public function launch(): void
     {
-        if (!get($this->options, 'webhook.url')) {
+        if (!get($this->options, 'webhook')) {
             $this->resetAllScenes();
             $this->longPolling();
         } else {

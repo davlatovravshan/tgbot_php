@@ -11,9 +11,7 @@ use scenes\UserInfoScene;
 
 try {
     $telegram = new TgBot(BOT_TOKEN2, [
-        'webhook' => [
-            'url' => 'https://b377-82-215-102-88.eu.ngrok.io/webhook.php',
-        ],
+        'webhook' => true,
     ]);
 
     $telegram->registerScene('info', UserInfoScene::class);

@@ -1,6 +1,6 @@
 <?php
 
-namespace telegram;
+namespace app\core;
 
 use Exception;
 
@@ -11,12 +11,12 @@ trait TelegramTrait
 
     public function getMessageType(string $type): ?string
     {
-        return get($this->message, $type);
+        return $this->message[$type] ?? null;
     }
 
     public function isMessageType(string $type): bool
     {
-        return get($this->message, $type) !== null;
+        return $this->getMessageType($type) !== null;
     }
 
 
@@ -25,7 +25,7 @@ trait TelegramTrait
      */
     public function isScene(string $scene): bool
     {
-        return $this->getRedis()->exists($scene);
+        return $this->getCache()->exists($scene);
     }
 
     public function isCbEquals(string $cb): bool
@@ -70,6 +70,15 @@ trait TelegramTrait
         return get($this->input, 'message.photo');
     }
 
+    public function getPhotoId(): ?string
+    {
+        $photo = $this->getPhoto();
+        if (empty($photo)) {
+            return null;
+        }
+        return get(end($photo), 'file_id');
+    }
+
 
     public function getCallbackQuery(): ?string
     {
@@ -96,7 +105,11 @@ trait TelegramTrait
     public function getFromId(): int
     {
         $cbFrom = get($this->input, 'callback_query.from');
-        return $cbFrom ? get($cbFrom, 'id') : get($this->message, 'from.id');
+        $editedFrom = get($this->input, 'edited_message.from');
+        $messageFrom = get($this->message, 'from');
+
+        $fromArr = $cbFrom ?: $editedFrom ?: $messageFrom;
+        return get($fromArr, 'id');
     }
 
 
@@ -122,6 +135,11 @@ trait TelegramTrait
     public function isText(): bool
     {
         return get($this->message, 'text') !== null;
+    }
+
+    public function isEmptyText(): bool
+    {
+        return empty($this->getText()) || $this->isCallbackQuery();
     }
 
     public function getText(): ?string
@@ -171,7 +189,6 @@ trait TelegramTrait
 
     public function getCommandArgString(): ?string
     {
-        // TODO: Implement getCommandArgString() method.
         return substr($this->getCommand(), 1);
     }
 

@@ -27,16 +27,13 @@ class TestScene extends Scene
         return [
             'name' => new SceneStep(
                 function () {
-                    $buttons = $this->getActionButtons(SceneCbEnum::BACK, SceneCbEnum::NEXT, SceneCbEnum::CANCEL);
-                    TgHelper::console($buttons);
-                    $this->ctx->answer('What is your name?', [
-                        'reply_markup' => [
-                            'inline_keyboard' => [
-                                $this->getActionButtons(SceneCbEnum::BACK, SceneCbEnum::NEXT),
-                                $this->getActionButtons(SceneCbEnum::CANCEL)
-                            ]
-                        ],
-                    ]);
+                    $this->ctx->answer(
+                        'What is your name?',
+                        $this->getCommonMarkup([
+                            [SceneCbEnum::BACK, SceneCbEnum::NEXT],
+                            [SceneCbEnum::CANCEL]
+                        ])
+                    );
                 },
                 function () {
                     $this->ctx->answer("Your name: {$this->ctx->getText()}");
@@ -49,7 +46,13 @@ class TestScene extends Scene
 
             'phone' => new SceneStep(
                 function () {
-                    $this->ctx->answer('What is your phone?');
+                    $this->ctx->answer(
+                        'What is your phone?',
+                        $this->getCommonMarkup([
+                            [SceneCbEnum::BACK, SceneCbEnum::NEXT],
+                            [SceneCbEnum::CANCEL]
+                        ])
+                    );
                 },
                 function () {
                     $this->ctx->answer("Your phone: {$this->ctx->getText()}");
@@ -62,7 +65,13 @@ class TestScene extends Scene
 
             'age' => new SceneStep(
                 function () {
-                    $this->ctx->answer('How old are you?');
+                    $this->ctx->answer(
+                        'How old are you?',
+                        $this->getCommonMarkup([
+                            [SceneCbEnum::BACK, SceneCbEnum::NEXT],
+                            [SceneCbEnum::CANCEL]
+                        ])
+                    );
                 },
                 function () {
                     $this->ctx->answer("Your age: {$this->ctx->getText()}");
@@ -71,7 +80,7 @@ class TestScene extends Scene
                     ]);
 
                     $data = json_encode($this->getData());
-                    $this->ctx->answer("Your data: {$data}");
+                    $this->ctx->answer("Your data: $data");
                     $this->finish();
                 }
             ),

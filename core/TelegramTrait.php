@@ -2,6 +2,7 @@
 
 namespace app\core;
 
+use app\core\scenes\BaseScene;
 use Exception;
 
 trait TelegramTrait
@@ -25,7 +26,8 @@ trait TelegramTrait
      */
     public function isScene(string $scene): bool
     {
-        return $this->getCache()->exists($scene);
+        $sceneName = BaseScene::getSceneKey($scene, $this->getFromId());
+        return $this->getCache()->exists($sceneName);
     }
 
     public function isCbEquals(string $cb): bool
@@ -90,6 +92,9 @@ trait TelegramTrait
     public function getCommand(): ?string
     {
         $text = get($this->input, 'message.text');
+        if (empty($text)) {
+            return null;
+        }
         return self::getCommandStatic($text);
     }
 

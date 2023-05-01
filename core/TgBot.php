@@ -17,29 +17,17 @@ use GuzzleHttp\Exception\GuzzleException;
  */
 class TgBot implements TelegramInterface
 {
-
     use TelegramTrait;
 
     private string $host;
-
     private string $apiUrl;
-
     private ?array $input;
-
-    public ?array $testInput;
-
     private array $middlewares = [];
-
     private array $handlers = [];
-
     private array $commandHandlers = [];
-
     private array $cbHandlers = [];
-
     private array $scenes = [];
-
     private array $sceneHandlers = [];
-
     public const ALLOWED_UPDATES = [
         'message',
         'edited_message',
@@ -53,7 +41,6 @@ class TgBot implements TelegramInterface
         'poll',
         'poll_answer'
     ];
-
     private CacheInterface $cache;
 
 
@@ -100,7 +87,9 @@ class TgBot implements TelegramInterface
     }
 
 
-
+    /**
+     * @throws Exception
+     */
     public function launch(): void
     {
         TgHelper::console($this->options->isWebhook());
@@ -170,12 +159,6 @@ class TgBot implements TelegramInterface
 
     private function loadInput(): void
     {
-        if (getenv('APP_ENV') === 'test') {
-            $this->input = $this->testInput;
-            $this->message = $this->getMessageObject();
-            return;
-        }
-
         $this->input = json_decode(file_get_contents('php://input'), true);
         $this->message = $this->getMessageObject();
     }
@@ -186,12 +169,14 @@ class TgBot implements TelegramInterface
      */
     private function runHandlers(): void
     {
+        if (!$this->isPrivateChat()) {
+            return;
+        }
+
         // Run scene handlers
         foreach ($this->scenes as $scene => $sceneClassName) {
-            $sceneName = BaseScene::getSceneKey($scene, $this->getFromId());
 
-            if ($this->isScene($sceneName) && $this->isPrivateChat()) {
-                TgHelper::console('Scene: ' . $scene);
+            if ($this->isScene($scene)) {
                 /** @var TestScene $sceneClassName */
                 $sceneClass = new $sceneClassName($this);
                 $sceneClass->runSteps();
@@ -270,7 +255,6 @@ class TgBot implements TelegramInterface
     public function registerScene(string $scene, string $sceneClass): void
     {
         $this->scenes[$scene] = $sceneClass;
-//        $this->sceneHandlers[$scene] = $sceneClass;
     }
 
 

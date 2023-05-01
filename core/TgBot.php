@@ -393,6 +393,7 @@ class TgBot implements TelegramInterface
             $responseStr = $response->getBody()->getContents();
             return json_decode($responseStr, true);
         } catch (Exception $e) {
+            TgHelper::console("TgBot::sendRequestStatic -> " . $e->getMessage());
             return [];
         }
     }

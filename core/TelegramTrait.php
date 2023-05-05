@@ -20,7 +20,6 @@ trait TelegramTrait
         return $this->getMessageType($type) !== null;
     }
 
-
     /**
      * @throws Exception
      */

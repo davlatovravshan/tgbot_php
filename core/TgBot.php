@@ -336,6 +336,20 @@ class TgBot implements TelegramInterface
         $this->sendMessage($chatId, $text, $options);
     }
 
+    public function deleteLastMessage(): void
+    {
+        $messageId = $this->message['message_id'] ?? null;
+        $this->deleteMessage($messageId);
+    }
+
+
+    public function deleteMessage($messageId): void
+    {
+        $this->sendRequest('deleteMessage', [
+            'chat_id' => $this->getFromId(),
+            'message_id' => $messageId
+        ]);
+    }
 
     public function sendMessage($chatId, $text, array $options = []): void
     {

@@ -6,9 +6,8 @@ require_once __DIR__ . '/config/config.php';
 require_once __DIR__ . '/config/functions.php';
 
 use app\core\config\TgBotParams;
-use app\core\TgBot;
 use app\scenes\TestScene;
-use GuzzleHttp\Exception\GuzzleException;
+use app\core\TgBot;
 
 
 try {
@@ -54,6 +53,6 @@ try {
     });
 
     $telegram->launch();
-} catch (GuzzleException $e) {
+} catch (Throwable $e) {
     console($e->getMessage());
 }
